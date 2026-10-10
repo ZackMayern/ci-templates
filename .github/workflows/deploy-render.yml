@@ -1,0 +1,27 @@
+name: deploy-render
+on:
+  workflow_call:
+    inputs:
+      image-tag: { type: string, required: true }
+      health-url: { type: string, required: true }
+    secrets:
+      RENDER_DEPLOY_HOOK_URL: { required: true }
+permissions: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          TAG: ${{ inputs.image-tag }}
+        run: curl -fsS -X POST "${HOOK}&imgURL=ghcr.io/${GITHUB_REPOSITORY}:${TAG}" # verify param in Render docs
+      - name: Smoke test
+        env:
+          URL: ${{ inputs.health-url }}
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS "$URL" && exit 0
+            sleep 10
+          done
+          echo "Health check failed"; exit 1

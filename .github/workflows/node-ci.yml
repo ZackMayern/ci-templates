@@ -1,0 +1,28 @@
+name: node-ci
+on:
+  workflow_call:
+    inputs:
+      node-version: { type: string, required: true }
+      working-directory: { type: string, default: "." }
+      lint-command: { type: string, default: "npm run lint --if-present" }
+      test-command: { type: string, default: "npm test" }
+      build-command: { type: string, default: "npm run build" }
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci
+      - run: ${{ inputs.lint-command }}
+      - run: ${{ inputs.test-command }}
+      - run: ${{ inputs.build-command }}

@@ -1,0 +1,22 @@
+name: dotnet-ci
+on:
+  workflow_call:
+    inputs:
+      dotnet-version: { type: string, required: true }   # match your project, e.g. "10.0.x"
+      working-directory: { type: string, default: "." }
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet test --no-build -c Release

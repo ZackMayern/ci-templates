@@ -1,0 +1,43 @@
+name: docker-ghcr
+on:
+  workflow_call:
+    inputs:
+      context: { type: string, default: "." }
+      dockerfile: { type: string, default: "Dockerfile" }
+      image-suffix: { type: string, default: "" }   # e.g. "-api"
+    outputs:
+      image-tag:
+        value: ${{ jobs.push.outputs.image-tag }}
+permissions:
+  contents: read
+  packages: write
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: vars
+        run: echo "tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}${{ inputs.image-suffix }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.tag }}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
